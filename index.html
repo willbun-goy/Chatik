@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0e">
+<title>RareChat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+  --bg:#0a0a0e;
+  --y:#ffd21e;
+  --y2:#ffb800;
+  --ink:#1a1400;
+  --text:#f5f5f7;
+  --muted:#a4a4b0;
+  --glass:rgba(255,255,255,.07);
+  --line:rgba(255,255,255,.13);
+  --r:20px;
+  --font:"Barlow Semi Condensed","Arial Narrow","Roboto Condensed","Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--text);font-family:var(--font);font-weight:800;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overscroll-behavior:none}
+body{min-height:100vh;overflow-x:hidden}
+button,input{font:inherit;color:inherit;border:0;outline:0;background:none}
+button{cursor:pointer}
+
+/* ---------- фон ---------- */
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(90% 55% at 85% -5%,rgba(255,210,30,.13),transparent 60%),
+    radial-gradient(80% 50% at 0% 100%,rgba(110,160,255,.10),transparent 60%),
+    var(--bg)}
+#fx{position:fixed;inset:0;z-index:1;pointer-events:none;width:100%;height:100%}
+
+/* ---------- загрузка ---------- */
+#loader{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:18px;background:
+  radial-gradient(120% 70% at 50% 0%,rgba(140,185,255,.16),transparent 62%),
+  radial-gradient(70% 40% at 50% 100%,rgba(140,185,255,.10),transparent 70%),#06070b;
+  transition:opacity .5s ease,visibility .5s}
+#loader.done{opacity:0;visibility:hidden}
+.rocket{width:92px;height:128px;animation:float 1.8s ease-in-out infinite}
+.rocket .flame{transform-origin:50% 0;animation:flame .18s ease-in-out infinite alternate}
+.brand{font-size:50px;font-weight:900;letter-spacing:.02em;line-height:1;
+  background:linear-gradient(110deg,#5f6e80 0%,#e9f2fc 28%,#98adc3 44%,#fff 54%,#7a8a9e 70%,#d3e3f3 100%);
+  background-size:260% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:shine 2.6s linear infinite;filter:drop-shadow(0 0 14px rgba(150,195,255,.38))}
+.bar{width:min(240px,64vw);height:8px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden}
+.bar i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--y2),var(--y))}
+.hint{font-size:14px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes flame{from{transform:scaleY(.8)}to{transform:scaleY(1.25)}}
+@keyframes shine{from{background-position:130% 0}to{background-position:-130% 0}}
+
+/* ---------- приложение ---------- */
+#app{position:relative;z-index:2;max-width:560px;margin:0 auto;padding:0 16px 40px;
+  opacity:0;transform:translateY(8px);transition:opacity .5s ease,transform .5s ease}
+#app.show{opacity:1;transform:none}
+
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;padding:calc(env(safe-area-inset-top,0px) + 12px) 0 12px;
+  background:linear-gradient(rgba(10,10,14,.97),rgba(10,10,14,.85) 75%,transparent)}
+.logo{font-size:28px;font-weight:900;letter-spacing:.01em}
+.logo b{color:var(--y)}
+.profile{display:flex;align-items:center;gap:9px;max-width:62%;padding:5px 14px 5px 5px;border-radius:99px;
+  background:var(--glass);border:1px solid var(--line);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);transition:transform .15s}
+.profile:active{transform:scale(.96)}
+.ava{flex:none;width:34px;height:34px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--y),var(--y2));color:var(--ink);font-weight:900;font-size:17px}
+.ava img{width:100%;height:100%;object-fit:cover;display:block}
+.nick{font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.hero{padding:22px 0 10px}
+.hero h1{font-size:46px;line-height:.98;font-weight:900;letter-spacing:-.005em}
+.hero h1 span{color:var(--y)}
+.hero p{margin-top:12px;font-size:19px;line-height:1.2;color:var(--muted);font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}
+.chip{padding:7px 13px;border-radius:99px;font-size:15px;background:var(--glass);border:1px solid var(--line)}
+.chip.y{background:rgba(255,210,30,.14);border-color:rgba(255,210,30,.5);color:var(--y)}
+.row{display:flex;gap:10px}
+
+.btn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 16px;
+  border-radius:16px;font-size:19px;font-weight:900;letter-spacing:.01em;text-align:center;
+  background:var(--glass);border:1px solid var(--line);
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);transition:transform .12s,filter .12s}
+.btn:active{transform:scale(.96)}
+.btn.yellow{background:linear-gradient(180deg,#ffe24d,var(--y2));color:var(--ink);border-color:transparent;
+  box-shadow:0 10px 28px rgba(255,196,0,.28)}
+
+section{margin-top:30px;scroll-margin-top:76px}
+h2{font-size:32px;font-weight:900;margin-bottom:4px}
+.sub{font-size:17px;color:var(--muted);font-weight:700;margin-bottom:14px}
+
+/* подписка */
+.plans{display:grid;gap:12px}
+.plan{position:relative;padding:16px;border-radius:var(--r);background:var(--glass);border:1px solid var(--line);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.plan.best{border-color:rgba(255,210,30,.65);box-shadow:0 0 0 1px rgba(255,210,30,.25),0 14px 36px rgba(255,196,0,.12)}
+.plan .head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.plan .name{font-size:30px;font-weight:900}
+.plan .dur{font-size:17px;color:var(--muted)}
+.plan .btn{font-size:17px;padding:0 10px;white-space:nowrap}
+.plan .price{margin:6px 0 14px;font-size:19px;color:var(--muted)}
+.plan .price b{color:var(--text)}
+.badge{position:absolute;top:-11px;right:14px;padding:3px 12px;border-radius:99px;font-size:14px;
+  background:var(--y);color:var(--ink);letter-spacing:.04em;text-transform:uppercase}
+.note{margin-top:12px;font-size:15px;line-height:1.2;color:var(--muted);font-weight:700}
+
+/* команды */
+.search{width:100%;height:50px;padding:0 16px;border-radius:16px;font-size:19px;font-weight:800;
+  background:var(--glass);border:1px solid var(--line)}
+.search::placeholder{color:#7d7d89}
+.search:focus{border-color:rgba(255,210,30,.7)}
+.tabs{display:flex;gap:8px;overflow-x:auto;margin:12px -16px 0;padding:0 16px 6px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;padding:8px 15px;border-radius:99px;font-size:16px;background:var(--glass);border:1px solid var(--line);color:var(--muted)}
+.tab.on{background:var(--y);border-color:var(--y);color:var(--ink)}
+.count{margin:10px 2px 8px;font-size:15px;color:var(--muted)}
+.list{border-radius:var(--r);background:var(--glass);border:1px solid var(--line);overflow:hidden;
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.sec-title{padding:12px 14px 6px;font-size:15px;letter-spacing:.1em;text-transform:uppercase;color:var(--y)}
+.cmd{display:flex;align-items:baseline;gap:12px;width:100%;padding:11px 14px;text-align:left;
+  border-top:1px solid var(--line);transition:background .12s}
+.cmd:active{background:rgba(255,210,30,.12)}
+.cmd .c{flex:none;max-width:46%;font-size:18px;font-weight:900;color:var(--y);word-break:break-word}
+.cmd .d{font-size:16px;line-height:1.15;color:#d9d9e0;font-weight:700}
+.empty{padding:22px;text-align:center;color:var(--muted);font-size:18px}
+
+footer{margin-top:34px;text-align:center;font-size:15px;color:#6f6f7b}
+
+/* профиль и уведомления */
+.shade{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.55);opacity:0;visibility:hidden;transition:.25s}
+.shade.on{opacity:1;visibility:visible}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:61;max-width:560px;margin:0 auto;
+  padding:22px 20px calc(env(safe-area-inset-bottom,0px) + 22px);border-radius:26px 26px 0 0;
+  background:#14141a;border:1px solid var(--line);transform:translateY(105%);transition:transform .3s ease;text-align:center}
+.sheet.on{transform:none}
+.sheet .big{width:84px;height:84px;margin:0 auto 12px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--y),var(--y2));color:var(--ink);font-size:40px;font-weight:900}
+.sheet .big img{width:100%;height:100%;object-fit:cover}
+.sheet .n{font-size:30px;font-weight:900}
+.sheet .i{margin:2px 0 16px;font-size:17px;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 26px);z-index:80;
+  transform:translate(-50%,30px);padding:11px 20px;border-radius:99px;background:var(--y);color:var(--ink);
+  font-size:17px;font-weight:900;opacity:0;pointer-events:none;transition:.25s}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<canvas id="fx"></canvas>
+
+<div id="loader">
+  <svg class="rocket" viewBox="0 0 92 128" aria-hidden="true">
+    <defs>
+      <linearGradient id="g1" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#8d9db0"/><stop offset=".5" stop-color="#f4f9ff"/><stop offset="1" stop-color="#7f90a5"/>
+      </linearGradient>
+    </defs>
+    <path d="M46 4C64 22 70 48 66 82H26C22 48 28 22 46 4Z" fill="url(#g1)"/>
+    <circle cx="46" cy="48" r="10" fill="#0a0a0e"/><circle cx="46" cy="48" r="7" fill="#6fb2ff"/>
+    <path d="M26 66L8 92l18-6zM66 66l18 26-18-6z" fill="#ffd21e"/>
+    <path d="M32 82h28l-6 8H38z" fill="#5d6c7e"/>
+    <g class="flame"><path d="M38 90h16l-8 34z" fill="#ffb800"/><path d="M42 90h8l-4 20z" fill="#fff3a0"/></g>
+  </svg>
+  <div class="brand">RareChat</div>
+  <div class="bar"><i id="barfill"></i></div>
+  <div class="hint">Загрузка</div>
+</div>
+
+<div id="app">
+  <header class="top">
+    <div class="logo">Rare<b>Chat</b></div>
+    <button class="profile" id="profile" type="button" aria-label="Профиль">
+      <span class="ava" id="ava"></span>
+      <span class="nick" id="nick"></span>
+    </button>
+  </header>
+
+  <div class="hero">
+    <h1>Чат-помощник<br>для <span>Telegram</span></h1>
+    <p>Подключи бота к своему аккаунту, и команды заработают прямо в твоих чатах.</p>
+    <div class="chips">
+      <span class="chip y">50+ команд</span>
+      <span class="chip">Дешёвая подписка</span>
+      <span class="chip">Бесплатный час</span>
+      <span class="chip">Быстро и удобно</span>
+    </div>
+    <div class="row">
+      <button class="btn yellow" type="button" data-go="bot">Открыть бота</button>
+      <button class="btn" type="button" data-go="channel">Наш канал</button>
+    </div>
+  </div>
+
+  <section id="plans">
+    <h2>Подписка</h2>
+    <div class="sub">Оплата откроется в боте: Stars или TON через @CryptoBot</div>
+    <div class="plans" id="planList"></div>
+    <div class="note">Первый час пользования бесплатный. Подписка включается автоматически после оплаты.</div>
+  </section>
+
+  <section id="cmds">
+    <h2>Команды</h2>
+    <div class="sub">Нажми на команду, чтобы скопировать её</div>
+    <input class="search" id="q" type="search" placeholder="Поиск команд" autocomplete="off">
+    <div class="tabs" id="tabs"></div>
+    <div class="count" id="count"></div>
+    <div class="list" id="list"></div>
+  </section>
+
+  <footer>RareChat · @RareChats_bot</footer>
+</div>
+
+<div class="shade" id="shade"></div>
+<div class="sheet" id="sheet">
+  <div class="big" id="bigAva"></div>
+  <div class="n" id="bigNick"></div>
+  <div class="i" id="bigId"></div>
+  <div class="row"><button class="btn yellow" type="button" id="sheetClose">Закрыть</button></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+"use strict";
+
+const COMMANDS = [{"title": "Основные", "items": [{"cmd": ".n", "desc": "Данные о собеседнике (имя, ID, username)"}, {"cmd": ".ru/.en/.ch/.uk (текст)", "desc": "Перевод сообщения"}, {"cmd": ".cal (пример)", "desc": "Калькулятор"}, {"cmd": ".help", "desc": "Список команд (работает без подписки)"}, {"cmd": ".time [±часы]", "desc": "Текущее время"}, {"cmd": ".date", "desc": "Сегодняшняя дата"}, {"cmd": ".tz ±часы", "desc": "Ваш часовой пояс"}, {"cmd": ".mute", "desc": "Замьютить собеседника: его сообщения удаляются"}, {"cmd": ".unmute", "desc": "Снять мут"}, {"cmd": ".afk (причина)", "desc": "Автоответ собеседникам, пока вас нет"}, {"cmd": ".back", "desc": "Выключить автоответ"}, {"cmd": ".ping", "desc": "Проверка работы бота"}]}, {"title": "Таймеры и заметки", "items": [{"cmd": ".timer (или .remind) 10м (текст)", "desc": "Таймер (30с, 5м, 1ч30м)"}, {"cmd": ".alarm 07:30 (текст)", "desc": "Будильник"}, {"cmd": ".alarms", "desc": "Список таймеров и будильников"}, {"cmd": ".cancel (номер/all)", "desc": "Отменить таймер или будильник"}, {"cmd": ".sw", "desc": "Секундомер (старт/стоп)"}, {"cmd": ".note (текст)", "desc": "Сохранить заметку"}, {"cmd": ".notes", "desc": "Мои заметки"}, {"cmd": ".delnote (номер/all)", "desc": "Удалить заметку"}, {"cmd": ".tally +/-/0", "desc": "Личный счётчик"}]}, {"title": "Интернет", "items": [{"cmd": ".weather (город)", "desc": "Погода"}, {"cmd": ".rate USD RUB 100", "desc": "Курс валют"}, {"cmd": ".crypto BTC", "desc": "Курс криптовалюты"}, {"cmd": ".wiki (запрос)", "desc": "Статья из Википедии"}, {"cmd": ".poll Вопрос | вар1 | вар2", "desc": "Создать опрос в чате"}]}, {"title": "Текст", "items": [{"cmd": ".len (текст)", "desc": "Длина текста"}, {"cmd": ".rev (текст)", "desc": "Перевернуть текст"}, {"cmd": ".up / .low (текст)", "desc": "ЗАГЛАВНЫЕ / строчные"}, {"cmd": ".title (текст)", "desc": "Каждое Слово С Заглавной"}, {"cmd": ".swapcase (текст)", "desc": "Поменять регистр"}, {"cmd": ".mock (текст)", "desc": "тЕкСт вОт Так"}, {"cmd": ".spaced (текст)", "desc": "т е к с т"}, {"cmd": ".wide (текст)", "desc": "ｗｉｄｅ шрифт"}, {"cmd": ".clap (текст)", "desc": "Между 👏 словами 👏"}, {"cmd": ".snake / .camel (текст)", "desc": "snake_case / camelCase"}, {"cmd": ".translit (текст)", "desc": "Русский в латиницу"}, {"cmd": ".sort / .uniq / .shuffle (слова)", "desc": "Сортировать / убрать повторы / перемешать"}, {"cmd": ".count слово (текст)", "desc": "Сколько раз встречается слово"}, {"cmd": ".repeat 3 (текст)", "desc": "Повторить текст"}, {"cmd": ".palindrome (текст)", "desc": "Проверка на палиндром"}, {"cmd": ".vowels (текст)", "desc": "Гласные и согласные"}, {"cmd": ".morse (текст)", "desc": "Азбука Морзе"}]}, {"title": "Коды и данные", "items": [{"cmd": ".b64 enc/dec (текст)", "desc": "Base64"}, {"cmd": ".hash (текст)", "desc": "MD5 / SHA1 / SHA256"}, {"cmd": ".ascii (текст/коды)", "desc": "Коды символов и обратно"}, {"cmd": ".url enc/dec (текст)", "desc": "URL-кодирование"}, {"cmd": ".json (код)", "desc": "Красиво оформить JSON"}, {"cmd": ".uuid", "desc": "Случайный UUID"}, {"cmd": ".pass [длина]", "desc": "Пароль (придёт вам в ЛС)"}, {"cmd": ".color", "desc": "Случайный цвет (HEX и RGB)"}, {"cmd": ".unix [число]", "desc": "Unix-время и обратно"}]}, {"title": "Числа и математика", "items": [{"cmd": ".bin / .hex (число)", "desc": "Двоичная / 16-ричная система"}, {"cmd": ".roman (число)", "desc": "Римские цифры (и обратно)"}, {"cmd": ".percent 15 200", "desc": "Проценты"}, {"cmd": ".sqrt (число)", "desc": "Квадратный корень"}, {"cmd": ".pow 2 10", "desc": "Степень"}, {"cmd": ".factorial (число)", "desc": "Факториал"}, {"cmd": ".gcd / .lcm (числа)", "desc": "НОД / НОК"}, {"cmd": ".prime (число)", "desc": "Простое ли число, разложение"}, {"cmd": ".fib (n)", "desc": "Число Фибоначчи"}, {"cmd": ".sum / .avg / .stats (числа)", "desc": "Сумма / среднее / статистика"}, {"cmd": ".tip 1000 10", "desc": "Чаевые"}, {"cmd": ".sale 5000 20", "desc": "Цена со скидкой"}, {"cmd": ".bmi вес рост", "desc": "Индекс массы тела"}, {"cmd": ".temp 25c", "desc": "Градусы C / F / K"}, {"cmd": ".conv 10 km mi", "desc": "Единицы измерения"}]}, {"title": "Даты и время", "items": [{"cmd": ".age 12.03.2000", "desc": "Возраст и дни до дня рождения"}, {"cmd": ".days 31.12.2026", "desc": "Сколько дней до даты"}, {"cmd": ".week", "desc": "Номер недели и день года"}, {"cmd": ".leap [год]", "desc": "Високосный ли год"}, {"cmd": ".newyear", "desc": "Сколько до Нового года"}, {"cmd": ".zodiac 12.03", "desc": "Знак зодиака"}, {"cmd": ".world", "desc": "Время в разных городах"}]}, {"title": "Рандом и развлечения", "items": [{"cmd": ".rand [от] [до]", "desc": "Случайное число"}, {"cmd": ".pick а, б, в", "desc": "Выбрать случайное"}, {"cmd": ".order а, б, в", "desc": "Случайный порядок"}, {"cmd": ".team а, б, в, г", "desc": "Разбить на 2 команды"}, {"cmd": ".coin", "desc": "Орёл или решка"}, {"cmd": ".dice [кол-во]", "desc": "Кубики"}, {"cmd": ".yesno", "desc": "Да или нет"}, {"cmd": ".8ball (вопрос)", "desc": "Шар предсказаний"}, {"cmd": ".chance (событие)", "desc": "Вероятность события"}, {"cmd": ".love Аня Борис", "desc": "Совместимость"}, {"cmd": ".iq", "desc": "Шуточный IQ"}, {"cmd": ".name", "desc": "Случайное имя"}, {"cmd": ".lorem [слов]", "desc": "Текст-заглушка"}, {"cmd": ".joke", "desc": "Шутка"}, {"cmd": ".fact", "desc": "Интересный факт"}, {"cmd": ".quote", "desc": "Мудрая фраза"}, {"cmd": ".advice", "desc": "Совет"}, {"cmd": ".compliment", "desc": "Комплимент"}]}, {"title": "Игры: кости и спорт", "items": [{"cmd": ".basket", "desc": "Бросок в баскетбольное кольцо"}, {"cmd": ".darts", "desc": "Дартс"}, {"cmd": ".football", "desc": "Пенальти"}, {"cmd": ".bowling", "desc": "Боулинг"}, {"cmd": ".casino", "desc": "Игровой автомат"}, {"cmd": ".cube", "desc": "Кубики: игрок против бота"}, {"cmd": ".slot", "desc": "Текстовый слот"}, {"cmd": ".race [1-3]", "desc": "Гонка (можно поставить на машину)"}]}, {"title": "Игры: головоломки и карты", "items": [{"cmd": ".word (слово до 5 букв)", "desc": "Слово на кнопках, буквы пишут в чат"}, {"cmd": ".guess [макс]", "desc": "Угадай число"}, {"cmd": ".bulls", "desc": "Быки и коровы"}, {"cmd": ".scramble", "desc": "Анаграмма"}, {"cmd": ".riddle", "desc": "Загадка"}, {"cmd": ".quiz", "desc": "Викторина (ответ цифрой 1–4)"}, {"cmd": ".math", "desc": "Пример на скорость"}, {"cmd": ".rps к/н/б", "desc": "Камень, ножницы, бумага"}, {"cmd": ".xo", "desc": "Крестики-нолики на кнопках"}, {"cmd": ".blackjack", "desc": "Блэкджек (21)"}, {"cmd": ".higher", "desc": "Выше или ниже (карты)"}, {"cmd": ".war", "desc": "Война карт"}, {"cmd": ".treasure", "desc": "Поиск клада"}, {"cmd": ".mines", "desc": "Сапёр"}, {"cmd": ".roulette", "desc": "Шуточная русская рулетка"}, {"cmd": ".wheel", "desc": "Колесо фортуны"}, {"cmd": ".td", "desc": "Правда или действие"}, {"cmd": ".wyr", "desc": "Что выберешь?"}, {"cmd": ".lucky", "desc": "Счастливый билет"}, {"cmd": ".stop", "desc": "Остановить игру"}]}];
+const PLANS = [{"id": "day", "name": "Сутки", "stars": 60, "ton": "0.8"}, {"id": "week", "name": "Неделя", "stars": 120, "ton": "1.25"}, {"id": "month", "name": "Месяц", "stars": 200, "ton": "2"}];
+
+const BOT = "RareChats_bot";
+const CHANNEL = "RareChat";
+
+const tg = window.Telegram && window.Telegram.WebApp;
+const $ = (s, r = document) => r.querySelector(s);
+const el = (tag, cls, text) => {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+};
+
+function haptic(kind) {
+  try { tg.HapticFeedback.impactOccurred(kind || "light"); } catch (_) {}
+}
+
+let toastTimer = 0;
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("on"), 1600);
+}
+
+function openTg(url) {
+  if (tg && typeof tg.openTelegramLink === "function") tg.openTelegramLink(url);
+  else window.open(url, "_blank", "noopener");
+}
+
+/* ---------- Telegram ---------- */
+try {
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    tg.setHeaderColor("#0a0a0e");
+    tg.setBackgroundColor("#0a0a0e");
+    if (typeof tg.disableVerticalSwipes === "function") tg.disableVerticalSwipes();
+  }
+} catch (_) {}
+
+/* ---------- профиль ---------- */
+const user = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+const nick = user
+  ? (user.username ? "@" + user.username : (user.first_name || "Гость"))
+  : "Гость";
+const initial = (nick.replace("@", "")[0] || "R").toUpperCase();
+
+function fillAvatar(box) {
+  box.replaceChildren();
+  if (user && user.photo_url) {
+    const img = new Image();
+    img.alt = "";
+    img.referrerPolicy = "no-referrer";
+    img.onerror = () => { box.replaceChildren(document.createTextNode(initial)); };
+    img.src = user.photo_url;
+    box.appendChild(img);
+  } else {
+    box.textContent = initial;
+  }
+}
+fillAvatar($("#ava"));
+fillAvatar($("#bigAva"));
+$("#nick").textContent = nick;
+$("#bigNick").textContent = nick;
+$("#bigId").textContent = user ? "ID: " + user.id : "Открой приложение из Telegram";
+
+function sheet(on) {
+  $("#sheet").classList.toggle("on", on);
+  $("#shade").classList.toggle("on", on);
+}
+$("#profile").addEventListener("click", () => { haptic(); sheet(true); });
+$("#shade").addEventListener("click", () => sheet(false));
+$("#sheetClose").addEventListener("click", () => sheet(false));
+
+/* ---------- ссылки ---------- */
+document.querySelectorAll("[data-go]").forEach((b) => {
+  b.addEventListener("click", () => {
+    haptic();
+    openTg(b.dataset.go === "bot" ? "https://t.me/" + BOT : "https://t.me/" + CHANNEL);
+  });
+});
+
+/* ---------- подписка: оплата открывается в боте ---------- */
+const DURATION = { day: "24 часа", week: "7 дней", month: "30 дней" };
+
+function buy(plan, method) {
+  haptic("medium");
+  openTg("https://t.me/" + BOT + "?start=buy_" + plan + "_" + method);
+  if (tg && typeof tg.close === "function") setTimeout(() => tg.close(), 350);
+}
+
+PLANS.forEach((p) => {
+  const card = el("div", "plan" + (p.id === "month" ? " best" : ""));
+  if (p.id === "month") card.appendChild(el("span", "badge", "Выгодно"));
+
+  const head = el("div", "head");
+  head.append(el("div", "name", p.name), el("div", "dur", DURATION[p.id] || ""));
+
+  const price = el("div", "price");
+  const a = el("b", null, p.stars + " Stars");
+  const b = el("b", null, p.ton + " TON");
+  price.append(a, document.createTextNode("  или  "), b);
+
+  const row = el("div", "row");
+  const bs = el("button", "btn yellow", "Оплатить Stars");
+  const bt = el("button", "btn", "Оплатить TON");
+  bs.type = bt.type = "button";
+  bs.addEventListener("click", () => buy(p.id, "stars"));
+  bt.addEventListener("click", () => buy(p.id, "ton"));
+  row.append(bs, bt);
+
+  card.append(head, price, row);
+  $("#planList").appendChild(card);
+});
+
+/* ---------- команды ---------- */
+const list = $("#list");
+const tabs = $("#tabs");
+let active = "all";
+let query = "";
+
+function tab(label, key) {
+  const t = el("button", "tab" + (key === active ? " on" : ""), label);
+  t.type = "button";
+  t.addEventListener("click", () => {
+    active = key;
+    haptic();
+    drawTabs();
+    drawList();
+  });
+  return t;
+}
+function drawTabs() {
+  tabs.replaceChildren(tab("Все", "all"), ...COMMANDS.map((s) => tab(s.title, s.title)));
+}
+
+function copyText(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text);
+  }
+  return new Promise((resolve, reject) => {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.cssText = "position:fixed;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy") ? resolve() : reject(); } catch (e) { reject(e); }
+    ta.remove();
+  });
+}
+
+function drawList() {
+  const nodes = [];
+  let n = 0;
+  COMMANDS.forEach((sec) => {
+    if (active !== "all" && sec.title !== active) return;
+    const items = sec.items.filter((it) =>
+      !query || (it.cmd + " " + it.desc).toLowerCase().includes(query));
+    if (!items.length) return;
+    nodes.push(el("div", "sec-title", sec.title));
+    items.forEach((it) => {
+      const row = el("button", "cmd");
+      row.type = "button";
+      row.append(el("span", "c", it.cmd), el("span", "d", it.desc));
+      row.addEventListener("click", () => {
+        const name = it.cmd.split(/\s/)[0].split("/")[0];
+        haptic();
+        copyText(name).then(() => toast("Скопировано: " + name), () => toast(name));
+      });
+      nodes.push(row);
+      n++;
+    });
+  });
+  if (!n) nodes.push(el("div", "empty", "Ничего не найдено"));
+  list.replaceChildren(...nodes);
+  $("#count").textContent = "Найдено: " + n;
+}
+
+$("#q").addEventListener("input", (e) => {
+  query = e.target.value.trim().toLowerCase();
+  drawList();
+});
+drawTabs();
+drawList();
+
+/* ---------- снег и фигуры (лёгкий, с паузой в фоне) ---------- */
+(function fx() {
+  const cv = $("#fx");
+  const ctx = cv.getContext("2d");
+  if (!ctx || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  let W = 0, H = 0;
+  const N = 30;
+  const parts = [];
+  function resize() {
+    W = cv.width = innerWidth;
+    H = cv.height = innerHeight;
+  }
+  resize();
+  addEventListener("resize", resize);
+  for (let i = 0; i < N; i++) {
+    parts.push({
+      x: Math.random() * W, y: Math.random() * H,
+      r: 1.2 + Math.random() * 2.6,
+      v: 0.25 + Math.random() * 0.7,
+      s: Math.random() * 6.28, k: Math.random() < 0.18 ? 1 + (i % 3) : 0
+    });
+  }
+  let last = 0;
+  function frame(t) {
+    requestAnimationFrame(frame);
+    if (document.hidden || t - last < 33) return;
+    last = t;
+    ctx.clearRect(0, 0, W, H);
+    for (const p of parts) {
+      p.y += p.v;
+      p.s += 0.015;
+      p.x += Math.sin(p.s) * 0.35;
+      if (p.y > H + 12) { p.y = -12; p.x = Math.random() * W; }
+      if (p.k) {
+        ctx.strokeStyle = "rgba(255,210,30,.28)";
+        ctx.lineWidth = 1.6;
+        const q = p.r * 2.4;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.s);
+        ctx.beginPath();
+        if (p.k === 1) ctx.rect(-q / 2, -q / 2, q, q);
+        else if (p.k === 2) { ctx.moveTo(0, -q); ctx.lineTo(q, q); ctx.lineTo(-q, q); ctx.closePath(); }
+        else ctx.arc(0, 0, q / 1.4, 0, 6.28);
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        ctx.fillStyle = "rgba(235,244,255,.55)";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, 6.28);
+        ctx.fill();
+      }
+    }
+  }
+  requestAnimationFrame(frame);
+})();
+
+/* ---------- экран загрузки ---------- */
+(function boot() {
+  const fill = $("#barfill");
+  const start = performance.now();
+  const MIN = 1900;
+  const fonts = document.fonts && document.fonts.ready
+    ? Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 2500))])
+    : Promise.resolve();
+  let fontsReady = false;
+  fonts.then(() => { fontsReady = true; });
+  (function tick(now) {
+    const p = Math.min(1, (now - start) / MIN);
+    fill.style.width = (p * 100).toFixed(1) + "%";
+    if (p < 1 || !fontsReady) return requestAnimationFrame(tick);
+    $("#loader").classList.add("done");
+    $("#app").classList.add("show");
+    setTimeout(() => $("#loader").remove(), 700);
+  })(start);
+})();
+})();
+</script>
+</body>
+</html>
